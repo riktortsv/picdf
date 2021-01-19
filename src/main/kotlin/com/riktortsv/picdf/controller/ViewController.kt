@@ -1,5 +1,6 @@
 package com.riktortsv.picdf.controller
 
+import com.riktortsv.picdf.app.AppProperty
 import com.riktortsv.picdf.app.PDFWriterParams
 import com.riktortsv.picdf.app.PDFWriterService
 import com.riktortsv.picdf.core.Injector
@@ -24,6 +25,12 @@ import kotlin.math.min
 
 
 class ViewController(val mainWindow: Stage): StackPane() {
+
+    companion object {
+        private const val SAVE_FILE_FOLDER = "SAVE_FILE_FOLDER"
+        private const val PDF_WIDTH = "PDF_WIDTH"
+        private const val PDF_HEIGHT = "PDF_HEIGHT"
+    }
 
     @FXML
     lateinit var displayNameColumn: TableColumn<ElementViewModel, String>
@@ -59,6 +66,15 @@ class ViewController(val mainWindow: Stage): StackPane() {
     lateinit var heightField: TextField
 
     @FXML
+    lateinit var clearSizeMenuItem: MenuItem
+
+    @FXML
+    lateinit var a4VerticalMenuItem: MenuItem
+
+    @FXML
+    lateinit var a4HorizontalMenuItem: MenuItem
+
+    @FXML
     lateinit var savePathField: TextField
 
     @FXML
@@ -80,6 +96,15 @@ class ViewController(val mainWindow: Stage): StackPane() {
         // 幅、高さを数字入力のみに
         widthField.textFormatter = TextFormatter(IntegerStringConverter(), 0)
         heightField.textFormatter = TextFormatter(IntegerStringConverter(), 0)
+        try {
+            if (AppProperty.containsKey(PDF_WIDTH)) {
+                widthField.text = AppProperty.getInt(PDF_WIDTH).toString()
+            }
+            if (AppProperty.containsKey(PDF_HEIGHT)) {
+                heightField.text = AppProperty.getInt(PDF_HEIGHT).toString()
+            }
+        } catch (e: Exception) {
+        }
 
         // テーブル列のフォーマット定義
         displayNameColumn.cellValueFactory = PropertyValueFactory("display")
@@ -99,6 +124,11 @@ class ViewController(val mainWindow: Stage): StackPane() {
         downButton.setOnAction { downPriority() }
         addButton.setOnAction { addElement() }
         removeButton.setOnAction { removeElement() }
+
+        // 出力サイズ
+        clearSizeMenuItem.setOnAction { clearPDFSize() }
+        a4VerticalMenuItem.setOnAction { setPDFSizeA4Vertical() }
+        a4HorizontalMenuItem.setOnAction { setPDFSizeA4Horizontal() }
 
         // 機能ボタン
         browseButton.setOnAction { browseSavePath() }
@@ -146,6 +176,12 @@ class ViewController(val mainWindow: Stage): StackPane() {
 
     private fun browseSavePath() {
         val fileChooser = FileChooser()
+        if (AppProperty.containsKey(SAVE_FILE_FOLDER)) {
+            try {
+                fileChooser.initialDirectory = Paths.get(AppProperty.getString(SAVE_FILE_FOLDER)).toFile()
+            } catch (e: Exception) {
+            }
+        }
         fileChooser.title = "ファイルの保存"
         fileChooser.extensionFilters.addAll(
             FileChooser.ExtensionFilter("PDFファイル", "*.pdf")
@@ -153,7 +189,23 @@ class ViewController(val mainWindow: Stage): StackPane() {
         val selectedFile = fileChooser.showSaveDialog(mainWindow)
         if (selectedFile != null) {
             savePathField.text = selectedFile.path
+            AppProperty.setValue(SAVE_FILE_FOLDER, selectedFile.absoluteFile.parent)
         }
+    }
+
+    private fun clearPDFSize() {
+        widthField.clear()
+        heightField.clear()
+    }
+
+    private fun setPDFSizeA4Vertical() {
+        widthField.text = PDFWriterService.A4_VERTICAL_WIDTH.toString()
+        heightField.text = PDFWriterService.A4_VERTICAL_HEIGHT.toString()
+    }
+
+    private fun setPDFSizeA4Horizontal() {
+        widthField.text = PDFWriterService.A4_VERTICAL_HEIGHT.toString()
+        heightField.text = PDFWriterService.A4_VERTICAL_WIDTH.toString()
     }
 
     private val scope by lazy { CoroutineScope(Dispatchers.JavaFx) }
@@ -176,7 +228,16 @@ class ViewController(val mainWindow: Stage): StackPane() {
         val width = widthField.text.toDoubleOrNull() ?: 0.0
         val height = heightField.text.toDoubleOrNull() ?: 0.0
 
-        job = scope.launch {
+        // プロパティ
+        AppProperty.setValue(PDF_WIDTH, width.toInt())
+        AppProperty.setValue(PDF_HEIGHT, height.toInt())
+
+        // クリーン
+        elementsTable.items.forEach {
+            it.resultProperty().value = null
+        }
+
+        job = GlobalScope.launch(Dispatchers.JavaFx) {
             val jobParam = PDFWriterParams(savePath, width, height, items)
             controls.forEach { it.isDisable = true }
             launchButton.text = "キャンセル"

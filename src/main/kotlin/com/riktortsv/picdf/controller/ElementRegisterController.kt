@@ -1,5 +1,6 @@
 package com.riktortsv.picdf.controller
 
+import com.riktortsv.picdf.app.AppProperty
 import com.riktortsv.picdf.domain.FileImageElement
 import com.riktortsv.picdf.domain.PDFImageElement
 import com.riktortsv.picdf.domain.URLImageElement
@@ -8,21 +9,21 @@ import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.control.*
+import javafx.scene.input.TransferMode
 import javafx.scene.layout.StackPane
 import javafx.stage.FileChooser
 import javafx.stage.Stage
+import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.nio.file.Paths
-import javafx.scene.input.TransferMode
-
-import javafx.scene.input.DragEvent
-
-
-
 
 
 class ElementRegisterController(val mainWindow: Stage): StackPane() {
+
+    companion object {
+        private const val LOCAL_FILE_FOLDER = "LOCAL_FILE_FOLDER"
+    }
 
     @FXML
     private lateinit var localFileTab: Tab
@@ -78,6 +79,19 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         // 参照ボタンのアクション定義
         localFileBrowseButton.setOnAction { fileChooser() }
 
+        // 表示名
+        localFilePathField.textProperty().addListener { o, ov, nv ->
+            getAsPath(nv)?.fileName?.toString()?.let {
+                localFileDisplayField.text = it
+            }
+        }
+        internetFileField.textProperty().addListener { o, ov, nv ->
+            getAsUrl(nv)?.toRegex()?.find("[^/]+$")?.value?.let {
+                internetFileDisplayField.text = it
+            }
+        }
+
+        // ファイルの一覧をドラッグアンドドロップしたときの動作
         bundledLocalFilesArea.setOnDragOver {
             if (it.gestureSource != bundledLocalFilesArea && it.dragboard.hasFiles()) {
                 it.acceptTransferModes(TransferMode.COPY)
@@ -99,6 +113,12 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
 
     private fun fileChooser() {
         val fileChooser = FileChooser()
+        if (AppProperty.containsKey(LOCAL_FILE_FOLDER)) {
+            try {
+                fileChooser.initialDirectory = Paths.get(AppProperty.getString(LOCAL_FILE_FOLDER)).toFile()
+            } catch (e: Exception) {
+            }
+        }
         fileChooser.title = "画像ファイルの選択"
         fileChooser.extensionFilters.addAll(
             FileChooser.ExtensionFilter("画像ファイル", "*.png", "*.jpg", "*.gif"),
@@ -107,12 +127,14 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         val selectedFile = fileChooser.showOpenDialog(mainWindow)
         if (selectedFile != null) {
             localFilePathField.text = selectedFile.path
+            AppProperty.setValue(LOCAL_FILE_FOLDER, selectedFile.absoluteFile.parent)
         }
     }
 
     private fun getAsPath(path: String): Path? {
         return try {
-            Paths.get(path)
+            val p = Paths.get(path)
+            if (Files.isDirectory(p)) return null else return p
         } catch (e: InvalidPathException) {
             null
         }

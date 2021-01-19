@@ -17,7 +17,6 @@ class ViewPresenter(val controller: ViewController): MainPresenter {
         getViewModel(element).run {
             doneProperty().value = true
             resultProperty().value = "done"
-            controller.elementsTable.scrollTo(this)
         }
     }
 
@@ -25,7 +24,6 @@ class ViewPresenter(val controller: ViewController): MainPresenter {
         getViewModel(element).run {
             doneProperty().value = true
             resultProperty().value = cause
-            controller.elementsTable.scrollTo(this)
         }
     }
 

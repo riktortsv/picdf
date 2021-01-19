@@ -8,10 +8,15 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory
 import java.io.Closeable
 import java.nio.file.Path
-import javax.imageio.ImageIO
 import kotlin.math.abs
 
 class PDFWriter: Closeable {
+
+    companion object {
+        // 縦置きしたときの辺のサイズ
+        val A4_VERTICAL_WIDTH: Int = PDRectangle.A4.width.toInt()
+        val A4_VERTICAL_HEIGHT: Int = PDRectangle.A4.height.toInt()
+    }
 
     private var isOpened = false
 
@@ -34,10 +39,8 @@ class PDFWriter: Closeable {
         val image = LosslessFactory.createFromImage(document, img)
 
         if (width < 1 || height < 1) {
-//            width = image.width.toFloat()
-//            height = image.height.toFloat()
-            width = PDRectangle.A4.width
-            height = PDRectangle.A4.height
+            width = image.width.toFloat()
+            height = image.height.toFloat()
         }
 
         val page = PDPage(PDRectangle(width, height))

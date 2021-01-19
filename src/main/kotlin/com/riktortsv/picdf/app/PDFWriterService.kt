@@ -1,8 +1,8 @@
 package com.riktortsv.picdf.app
 
+import com.riktortsv.picdf.controller.MainPresenter
 import com.riktortsv.picdf.core.Injector
 import com.riktortsv.picdf.domain.PDFWriter
-import com.riktortsv.picdf.controller.MainPresenter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -10,6 +10,12 @@ import java.io.IOException
 import java.nio.file.Files
 
 class PDFWriterService {
+
+    companion object {
+        // 縦置きしたときの辺のサイズ
+        val A4_VERTICAL_WIDTH: Int = PDFWriter.A4_VERTICAL_WIDTH
+        val A4_VERTICAL_HEIGHT: Int = PDFWriter.A4_VERTICAL_HEIGHT
+    }
 
     private val presenter: MainPresenter by lazy { Injector.presenter }
 
@@ -23,7 +29,10 @@ class PDFWriterService {
         if (Files.exists(params.savePath)) {
             val isAcceptOverWrite = presenter.confirm("ファイルの上書き", "ファイルが既に存在します。\n上書きしてよろしいですか？")
             // ファイルの上書きを受け入れないときは帰る
-            if (!isAcceptOverWrite) return@withContext
+            if (!isAcceptOverWrite) {
+                presenter.cancel()
+                return@withContext
+            }
         }
 
         PDFWriter().use { writer ->
