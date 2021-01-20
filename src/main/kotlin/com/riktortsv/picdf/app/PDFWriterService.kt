@@ -35,7 +35,8 @@ class PDFWriterService {
             }
         }
 
-        PDFWriter().use { writer ->
+        val writer = PDFWriter()
+        try {
             writer.open(params.savePath, params.width.toFloat(), params.height.toFloat())
             for (element in params.elements) {
                 if (!isActive) {
@@ -53,8 +54,11 @@ class PDFWriterService {
                     presenter.failure(element, e.message ?: "予期しないエラー")
                 }
             }
-            writer.write()
             presenter.succeed()
+        } catch (e: Exception) {
+            presenter.cancel()
+        } finally {
+            writer.close()
         }
     }
 

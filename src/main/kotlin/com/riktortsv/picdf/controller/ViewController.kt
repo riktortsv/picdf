@@ -66,6 +66,9 @@ class ViewController(val mainWindow: Stage): StackPane() {
     lateinit var heightField: TextField
 
     @FXML
+    lateinit var pdfSizeMenuButton: MenuButton
+
+    @FXML
     lateinit var clearSizeMenuItem: MenuItem
 
     @FXML
@@ -140,7 +143,11 @@ class ViewController(val mainWindow: Stage): StackPane() {
             }
         }
 
-        controls = listOf(widthField, heightField, upButton, downButton, addButton, removeButton, browseButton)
+        controls = listOf(widthField, heightField,
+                upButton, downButton,
+                addButton, removeButton,
+                pdfSizeMenuButton, browseButton
+        )
 
         Injector.presenter = ViewPresenter(this)
 
@@ -164,9 +171,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
     }
 
     private fun addElement() {
-        ElementRegisterController(mainWindow).showDialog().forEach {
-            elementsTable.items.add(ElementViewModel(it))
-        }
+        ElementRegisterController(mainWindow).showDialog(elementsTable.items)
     }
 
     private fun removeElement() {
@@ -237,7 +242,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
             it.resultProperty().value = null
         }
 
-        job = GlobalScope.launch(Dispatchers.JavaFx) {
+        job = scope.launch(Dispatchers.JavaFx) {
             val jobParam = PDFWriterParams(savePath, width, height, items)
             controls.forEach { it.isDisable = true }
             launchButton.text = "キャンセル"

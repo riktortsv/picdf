@@ -4,15 +4,19 @@ import com.riktortsv.picdf.app.AppProperty
 import com.riktortsv.picdf.domain.FileImageElement
 import com.riktortsv.picdf.domain.PDFImageElement
 import com.riktortsv.picdf.domain.URLImageElement
+import javafx.beans.value.ChangeListener
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.TransferMode
 import javafx.scene.layout.StackPane
 import javafx.stage.FileChooser
+import javafx.stage.Modality
 import javafx.stage.Stage
+import javafx.stage.StageStyle
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -58,6 +62,12 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
     @FXML
     private lateinit var bundledInternetFilesArea: TextArea
 
+    @FXML
+    private lateinit var addButton: Button
+
+    @FXML
+    private lateinit var closeButton: Button
+
     init {
         val loader = FXMLLoader(javaClass.getResource("/fxml/ElementRegister.fxml"))
         loader.setController(this)
@@ -81,14 +91,10 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
 
         // 表示名
         localFilePathField.textProperty().addListener { o, ov, nv ->
-            getAsPath(nv)?.fileName?.toString()?.let {
-                localFileDisplayField.text = it
-            }
+            localFileDisplayField.text = getAsPath(nv)?.fileName?.toString()
         }
         internetFileField.textProperty().addListener { o, ov, nv ->
-            getAsUrl(nv)?.toRegex()?.find("[^/]+$")?.value?.let {
-                internetFileDisplayField.text = it
-            }
+            internetFileDisplayField.text = getAsUrl(nv)?.toRegex()?.find("[^/]+$")?.value
         }
 
         // ファイルの一覧をドラッグアンドドロップしたときの動作
@@ -146,49 +152,60 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         return urlRegex.find(url)?.value
     }
 
-    fun showDialog(): ObservableList<PDFImageElement> {
-        val dialog = Dialog<ButtonType>()
-        dialog.title = "画像ファイルの選択"
-        dialog.dialogPane.content = this
-        dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
-        val result = FXCollections.observableArrayList<PDFImageElement>()
-        dialog.showAndWait().ifPresent {
-            if (it != ButtonType.OK) return@ifPresent
+    fun showDialog(addTo: ObservableList<ElementViewModel>) {
+        val stage = Stage()
+        stage.title = "画像ファイルの追加"
+        stage.scene = Scene(this)
+        stage.isResizable = false
+        stage.initOwner(mainWindow)
+        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.showingProperty().addListener { _, ov, nv ->
+            if (ov && !nv) {
+                addButton.onAction = null
+                closeButton.onAction = null
+            }
+        }
 
+        addButton.setOnAction {
             when {
                 localFileTab.isSelected -> {
                     getAsPath(localFilePathField.text)?.let {
                         val element = FileImageElement(it)
                         localFileDisplayField.text?.let { element.displayName = it }
-                        result.add(element)
+                        addTo.add(ElementViewModel(element))
+                        localFilePathField.clear()
                     }
                 }
                 internetFileTab.isSelected -> {
                     getAsUrl(internetFileField.text)?.let {
                         val element = URLImageElement(it)
                         internetFileDisplayField.text?.let { element.displayName = it }
-                        result.add(element)
+                        addTo.add(ElementViewModel(element))
+                        internetFileField.clear()
                     }
                 }
                 bundledLocalFileTab.isSelected -> {
                     bundledLocalFilesArea.text?.split("\n")?.forEach { path ->
                         getAsPath(path)?.let {
                             val element = FileImageElement(it)
-                            result.add(element)
+                            addTo.add(ElementViewModel(element))
                         }
                     }
+                    bundledLocalFilesArea.clear()
                 }
                 bundledLocalInternetTab.isSelected -> {
                     bundledLocalFilesArea.text?.split("\n")?.forEach { url ->
                         getAsUrl(url)?.let {
                             val element = URLImageElement(it)
-                            result.add(element)
+                            addTo.add(ElementViewModel(element))
                         }
                     }
+                    bundledLocalFilesArea.clear()
                 }
             }
         }
 
-        return result
+        closeButton.setOnAction { stage.close() }
+        stage.showAndWait()
     }
 }
