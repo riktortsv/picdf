@@ -4,6 +4,9 @@ import com.riktortsv.picdf.app.AppProperty
 import com.riktortsv.picdf.app.PDFWriterParams
 import com.riktortsv.picdf.app.PDFWriterService
 import com.riktortsv.picdf.core.Injector
+import com.riktortsv.picdf.core.StringUtils
+import com.riktortsv.picdf.domain.FileImageElement
+import com.riktortsv.picdf.domain.URLImageElement
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Node
@@ -13,10 +16,12 @@ import javafx.scene.layout.StackPane
 import javafx.util.converter.IntegerStringConverter
 import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.control.cell.TextFieldTableCell
+import javafx.scene.input.TransferMode
 import javafx.stage.FileChooser
 import javafx.stage.Stage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
+import java.awt.Color
 import java.nio.file.InvalidPathException
 import java.nio.file.Paths
 import java.util.*
@@ -28,6 +33,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
 
     companion object {
         private const val SAVE_FILE_FOLDER = "SAVE_FILE_FOLDER"
+        private const val BACKGROUND_COLOR = "BACKGROUND_COLOR"
         private const val PDF_WIDTH = "PDF_WIDTH"
         private const val PDF_HEIGHT = "PDF_HEIGHT"
     }
@@ -60,6 +66,9 @@ class ViewController(val mainWindow: Stage): StackPane() {
     lateinit var removeButton: Button
 
     @FXML
+    lateinit var colorPicker: ColorPicker
+
+    @FXML
     lateinit var widthField: TextField
 
     @FXML
@@ -86,6 +95,9 @@ class ViewController(val mainWindow: Stage): StackPane() {
     @FXML
     lateinit var launchButton: Button
 
+    @FXML
+    lateinit var progress: ProgressIndicator
+
     init {
         val loader = FXMLLoader(javaClass.getResource("/fxml/Main.fxml"))
         loader.setController(this)
@@ -99,12 +111,23 @@ class ViewController(val mainWindow: Stage): StackPane() {
         // 幅、高さを数字入力のみに
         widthField.textFormatter = TextFormatter(IntegerStringConverter(), 0)
         heightField.textFormatter = TextFormatter(IntegerStringConverter(), 0)
+        // 前回実行時のプロパティを復元
         try {
             if (AppProperty.containsKey(PDF_WIDTH)) {
                 widthField.text = AppProperty.getInt(PDF_WIDTH).toString()
             }
             if (AppProperty.containsKey(PDF_HEIGHT)) {
                 heightField.text = AppProperty.getInt(PDF_HEIGHT).toString()
+            }
+        } catch (e: Exception) {
+        }
+        try {
+            if (AppProperty.containsKey(BACKGROUND_COLOR)) {
+                val rgb = AppProperty.getInt(BACKGROUND_COLOR)
+                val r: Int = rgb.shr(16).and(0xff)
+                val g: Int = rgb.shr(8).and(0xff)
+                val b: Int = rgb.shr(0).and(0xff)
+                colorPicker.value = javafx.scene.paint.Color.rgb(r, g, b)
             }
         } catch (e: Exception) {
         }
@@ -136,14 +159,61 @@ class ViewController(val mainWindow: Stage): StackPane() {
         // 機能ボタン
         browseButton.setOnAction { browseSavePath() }
         launchButton.setOnAction {
-            if (job == null) {
+            if (task == null) {
                 launch()
             } else {
                 cancel()
             }
         }
 
-        controls = listOf(widthField, heightField,
+        // ファイルの一覧をドラッグアンドドロップしたときの動作
+        setOnDragOver { e ->
+            val db = e.dragboard
+            if (e.gestureSource != this && (db.hasFiles() || db.hasString() || db.hasUrl())) {
+                e.acceptTransferModes(TransferMode.COPY)
+            }
+            e.consume()
+        }
+        setOnDragDropped { e ->
+            val db = e.dragboard
+
+            // クリップボードの内容に応じて分岐してImageElementに変換
+            val elements = when {
+                db.hasFiles() -> {
+                    db.files.map { it.toPath() }.map { FileImageElement(it) }
+                }
+                db.hasUrl() -> {
+                    val filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsUrl(it) }
+                    if (filePaths.isNotEmpty()) {
+                        filePaths.map { URLImageElement(it) }
+                    } else {
+                        val paths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsPath(it) }
+                        paths.map { FileImageElement(it) }
+                    }
+                }
+                db.hasString() -> {
+                    val filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsPath(it) }
+                    if (filePaths.isNotEmpty()) {
+                        filePaths.map { FileImageElement(it) }
+                    } else {
+                        val urls = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsUrl(it) }
+                        urls.map { URLImageElement(it) }
+                    }
+                }
+                else -> emptyList()
+            }.map { ElementViewModel(it) }
+
+            // テーブルに追加
+            elementsTable.items.addAll(elements)
+
+            e.isDropCompleted = true
+            e.consume()
+        }
+        setOnDragDone { e ->
+            e.consume()
+        }
+
+        controls = listOf(colorPicker, widthField, heightField,
                 upButton, downButton,
                 addButton, removeButton,
                 pdfSizeMenuButton, browseButton
@@ -154,6 +224,8 @@ class ViewController(val mainWindow: Stage): StackPane() {
         mainWindow.showingProperty().addListener { o, ov, nv ->
             if (!nv) scope.cancel()
         }
+
+        progress.visibleProperty().bind(progress.indeterminateProperty().not())
     }
 
     private fun upPriority() {
@@ -214,7 +286,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
     }
 
     private val scope by lazy { CoroutineScope(Dispatchers.JavaFx) }
-    private var job: Job? = null
+    private var task: Job? = null
 
     private val service by lazy { PDFWriterService() }
 
@@ -233,7 +305,11 @@ class ViewController(val mainWindow: Stage): StackPane() {
         val width = widthField.text.toDoubleOrNull() ?: 0.0
         val height = heightField.text.toDoubleOrNull() ?: 0.0
 
+        val pickedColor = colorPicker.value
+        val color = Color(pickedColor.red.toFloat(), pickedColor.green.toFloat(), pickedColor.blue.toFloat())
+
         // プロパティ
+        AppProperty.setValue(BACKGROUND_COLOR, color.rgb)
         AppProperty.setValue(PDF_WIDTH, width.toInt())
         AppProperty.setValue(PDF_HEIGHT, height.toInt())
 
@@ -242,25 +318,43 @@ class ViewController(val mainWindow: Stage): StackPane() {
             it.resultProperty().value = null
         }
 
-        job = scope.launch(Dispatchers.JavaFx) {
-            val jobParam = PDFWriterParams(savePath, width, height, items)
-            controls.forEach { it.isDisable = true }
-            launchButton.text = "キャンセル"
-            service.write(jobParam)
+        task = scope.launch(Dispatchers.JavaFx) {
+            try {
+                // タスクパラメータ
+                val taskParams = PDFWriterParams(savePath, width, height, color, items)
+
+                // UI変更
+                controls.forEach { it.isDisable = true }
+                launchButton.text = "キャンセル"
+                elementsTable.columns.forEach { it.isSortable = false }
+
+                // タスク実行
+                service.write(taskParams)
+            } catch (e: CancellationException) {
+                canceled()
+            }
         }
     }
 
     private fun cancel() {
-        job?.cancel()
+        task?.cancel()
     }
 
     fun succeeded() {
-        controls.forEach { it.isDisable = false }
-        launchButton.text = "開始"
-        elementsTable.items.forEach {
-            it.doneProperty().value = false
+        try {
+            // UI変更
+            controls.forEach { it.isDisable = false }
+            launchButton.text = "開始"
+            elementsTable.items.forEach {
+                it.doneProperty().value = false
+            }
+            elementsTable.columns.forEach { it.isSortable = false }
+
+            // タスククリア
+            task = null
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        job = null
     }
 
     fun canceled() {

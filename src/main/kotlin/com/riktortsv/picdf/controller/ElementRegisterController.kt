@@ -1,11 +1,10 @@
 package com.riktortsv.picdf.controller
 
 import com.riktortsv.picdf.app.AppProperty
+import com.riktortsv.picdf.core.StringUtils
 import com.riktortsv.picdf.domain.FileImageElement
-import com.riktortsv.picdf.domain.PDFImageElement
+import com.riktortsv.picdf.domain.ImageUrlParser
 import com.riktortsv.picdf.domain.URLImageElement
-import javafx.beans.value.ChangeListener
-import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
@@ -16,10 +15,9 @@ import javafx.scene.layout.StackPane
 import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
-import javafx.stage.StageStyle
-import java.nio.file.Files
-import java.nio.file.InvalidPathException
-import java.nio.file.Path
+import kotlinx.coroutines.*
+import kotlinx.coroutines.javafx.JavaFx
+import java.net.URL
 import java.nio.file.Paths
 
 
@@ -28,6 +26,9 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
     companion object {
         private const val LOCAL_FILE_FOLDER = "LOCAL_FILE_FOLDER"
     }
+
+    @FXML
+    private lateinit var tabPane: TabPane
 
     @FXML
     private lateinit var localFileTab: Tab
@@ -57,10 +58,16 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
     private lateinit var bundledLocalFilesArea: TextArea
 
     @FXML
-    private lateinit var bundledLocalInternetTab: Tab
+    private lateinit var parseWebUrlField: TextField
 
     @FXML
-    private lateinit var bundledInternetFilesArea: TextArea
+    private lateinit var parseWebButton: Button
+
+    @FXML
+    private lateinit var parseWebUrlsArea: TextArea
+
+    @FXML
+    private lateinit var parseWebPageTab: Tab
 
     @FXML
     private lateinit var addButton: Button
@@ -77,43 +84,90 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
 
     fun initialize() {
         // プロンプトメッセージを手動で設定
-        bundledLocalFilesArea.promptText = "ex.)\r\n" +
-                "D:\\image1.jpg\r\n" +
-                "D:\\image2.jpg\r\n" +
+        bundledLocalFilesArea.promptText = "ex.)${System.lineSeparator()}" +
+                "D:\\image1.jpg${System.lineSeparator()}" +
+                "D:\\image2.jpg${System.lineSeparator()}" +
                 "D:\\photo.png"
-        bundledInternetFilesArea.promptText = "ex.)\r\n" +
-                "https://picdf.com/image1.jpg\r\n" +
-                "https://picdf.com/image2.jpg\r\n" +
-                "https://picdf.com/photo.gif"
 
         // 参照ボタンのアクション定義
         localFileBrowseButton.setOnAction { fileChooser() }
 
+        // URL解析のボタン、URLフィールドのアクション定義
+        parseWebButton.setOnAction { parseWebPage() }
+        parseWebUrlField.setOnAction { parseWebPage() }
+
         // 表示名
         localFilePathField.textProperty().addListener { o, ov, nv ->
-            localFileDisplayField.text = getAsPath(nv)?.fileName?.toString()
+            localFileDisplayField.text = StringUtils.getAsPath(nv)?.fileName?.toString()
         }
         internetFileField.textProperty().addListener { o, ov, nv ->
-            internetFileDisplayField.text = getAsUrl(nv)?.toRegex()?.find("[^/]+$")?.value
+            internetFileDisplayField.text = StringUtils.getAsUrl(nv)?.toRegex()?.find("[^/]+$")?.value
         }
 
         // ファイルの一覧をドラッグアンドドロップしたときの動作
-        bundledLocalFilesArea.setOnDragOver {
-            if (it.gestureSource != bundledLocalFilesArea && it.dragboard.hasFiles()) {
+        setOnDragOver {
+            val db = it.dragboard
+            if (it.gestureSource != this && (db.hasFiles() || db.hasString() || db.hasUrl())) {
                 it.acceptTransferModes(TransferMode.COPY)
             }
             it.consume()
         }
-        bundledLocalFilesArea.setOnDragDropped {
+        setOnDragDropped {
             val db = it.dragboard
 
-            bundledLocalFilesArea.text = db.files.map { it.absolutePath }.joinToString("\n")
+            when {
+                db.hasFiles() -> {
+                    bundledLocalFilesArea.text = db.files.map { it.absolutePath }.joinToString(System.lineSeparator())
+                    tabPane.selectionModel.select(bundledLocalFileTab)
+                }
+                db.hasUrl() -> {
+                    var filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsUrl(it) }.joinToString(System.lineSeparator())
+                    if (filePaths.isNotEmpty()) {
+                        parseWebUrlsArea.text = filePaths
+                        tabPane.selectionModel.select(parseWebPageTab)
+                    } else {
+                        filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsPath(it) }.joinToString(System.lineSeparator())
+                        bundledLocalFilesArea.text = filePaths
+                        tabPane.selectionModel.select(bundledLocalFileTab)
+                    }
+                }
+                db.hasString() -> {
+                    var filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsPath(it) }.joinToString(System.lineSeparator())
+                    if (filePaths.isNotEmpty()) {
+                        bundledLocalFilesArea.text = filePaths
+                        tabPane.selectionModel.select(bundledLocalFileTab)
+                    } else {
+                        filePaths = db.string.split(System.lineSeparator()).mapNotNull { StringUtils.getAsUrl(it) }.joinToString(System.lineSeparator())
+                        parseWebUrlsArea.text = filePaths
+                        tabPane.selectionModel.select(parseWebPageTab)
+                    }
+                }
+            }
 
             it.isDropCompleted = true
             it.consume()
         }
-        bundledLocalFilesArea.setOnDragDone {
+        setOnDragDone {
             it.consume()
+        }
+    }
+
+    private fun parseWebPage() {
+        val url = try {
+            URL(parseWebUrlField.text)
+        } catch (e: Exception) {
+            Alert(Alert.AlertType.INFORMATION, "URLを読み込めません", ButtonType.OK).showAndWait()
+            return
+        }
+
+        viewScope?.launch {
+            parseWebButton.isDisable = true
+            val urls = withContext(Dispatchers.Default) {
+                val parser = ImageUrlParser()
+                parser.parse(url).sorted()
+            }
+            parseWebUrlsArea.text = urls.joinToString("\n")
+            parseWebButton.isDisable = false
         }
     }
 
@@ -137,39 +191,30 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         }
     }
 
-    private fun getAsPath(path: String): Path? {
-        return try {
-            val p = Paths.get(path)
-            if (Files.isDirectory(p)) return null else return p
-        } catch (e: InvalidPathException) {
-            null
-        }
-    }
-
-    private val urlRegex by lazy { """https?://(?!.+http)[\w/:%#${'$'}&?()~.=+\-]+""".toRegex() }
-
-    private fun getAsUrl(url: String): String? {
-        return urlRegex.find(url)?.value
-    }
+    private var viewScope: CoroutineScope? = null
 
     fun showDialog(addTo: ObservableList<ElementViewModel>) {
+        viewScope = CoroutineScope(Dispatchers.JavaFx)
+
         val stage = Stage()
         stage.title = "画像ファイルの追加"
         stage.scene = Scene(this)
-        stage.isResizable = false
+        stage.isResizable = true
         stage.initOwner(mainWindow)
-        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.initModality(Modality.WINDOW_MODAL)
         stage.showingProperty().addListener { _, ov, nv ->
             if (ov && !nv) {
                 addButton.onAction = null
                 closeButton.onAction = null
+                viewScope?.cancel()
+                viewScope = null
             }
         }
 
         addButton.setOnAction {
             when {
                 localFileTab.isSelected -> {
-                    getAsPath(localFilePathField.text)?.let {
+                    StringUtils.getAsPath(localFilePathField.text)?.let {
                         val element = FileImageElement(it)
                         localFileDisplayField.text?.let { element.displayName = it }
                         addTo.add(ElementViewModel(element))
@@ -177,7 +222,7 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
                     }
                 }
                 internetFileTab.isSelected -> {
-                    getAsUrl(internetFileField.text)?.let {
+                    StringUtils.getAsUrl(internetFileField.text)?.let {
                         val element = URLImageElement(it)
                         internetFileDisplayField.text?.let { element.displayName = it }
                         addTo.add(ElementViewModel(element))
@@ -186,26 +231,28 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
                 }
                 bundledLocalFileTab.isSelected -> {
                     bundledLocalFilesArea.text?.split("\n")?.forEach { path ->
-                        getAsPath(path)?.let {
+                        StringUtils.getAsPath(path)?.let {
                             val element = FileImageElement(it)
                             addTo.add(ElementViewModel(element))
                         }
                     }
                     bundledLocalFilesArea.clear()
                 }
-                bundledLocalInternetTab.isSelected -> {
-                    bundledLocalFilesArea.text?.split("\n")?.forEach { url ->
-                        getAsUrl(url)?.let {
+                parseWebPageTab.isSelected -> {
+                    parseWebUrlsArea.text?.split("\n")?.forEach { url ->
+                        StringUtils.getAsUrl(url)?.let {
                             val element = URLImageElement(it)
                             addTo.add(ElementViewModel(element))
                         }
                     }
-                    bundledLocalFilesArea.clear()
+                    parseWebUrlsArea.clear()
                 }
             }
         }
 
         closeButton.setOnAction { stage.close() }
+
+        WindowStateSerializer().bind(stage, "REGISTERER")
         stage.showAndWait()
     }
 }

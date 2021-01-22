@@ -35,9 +35,9 @@ class PDFWriterService {
             }
         }
 
-        val writer = PDFWriter()
-        try {
-            writer.open(params.savePath, params.width.toFloat(), params.height.toFloat())
+        var count = 0.0
+        PDFWriter().use { writer ->
+            writer.open(params.savePath, params.width.toFloat(), params.height.toFloat(), params.backgroundColor)
             for (element in params.elements) {
                 if (!isActive) {
                     presenter.cancel()
@@ -48,17 +48,15 @@ class PDFWriterService {
                     writer.acceptImageElement(element)
                     presenter.proceed(element)
                 } catch (e: IOException) {
-                    presenter.failure(element, e.message ?: "IOエラー")
+                    presenter.failure(element, "IOエラー")
                 } catch (e: Exception) {
                     presenter.error("予期しないエラー", "予期しないエラーが発生しました")
                     presenter.failure(element, e.message ?: "予期しないエラー")
                 }
+
+                presenter.progress(++count / params.elements.size)
             }
             presenter.succeed()
-        } catch (e: Exception) {
-            presenter.cancel()
-        } finally {
-            writer.close()
         }
     }
 

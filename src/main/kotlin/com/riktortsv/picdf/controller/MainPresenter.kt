@@ -8,6 +8,8 @@ interface MainPresenter {
 
     suspend fun failure(element: PDFImageElement, cause: String)
 
+    suspend fun progress(progress: Double)
+
     suspend fun confirm(title: String, context: String): Boolean
 
     suspend fun message(title: String, context: String)

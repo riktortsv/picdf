@@ -82,7 +82,4 @@ class WindowStateSerializer {
         }
     }
 
-    fun restore() {
-    }
-
 }

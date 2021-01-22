@@ -27,6 +27,10 @@ class ViewPresenter(val controller: ViewController): MainPresenter {
         }
     }
 
+    override suspend fun progress(progress: Double) = withContext(Dispatchers.JavaFx) {
+        controller.progress.progress = progress
+    }
+
     override suspend fun confirm(title: String, context: String) = withContext(Dispatchers.JavaFx) {
         val alert = Alert(Alert.AlertType.CONFIRMATION, context, ButtonType.YES, ButtonType.NO)
         alert.title = title

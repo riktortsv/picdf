@@ -6,6 +6,7 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory
+import java.awt.Color
 import java.io.Closeable
 import java.nio.file.Path
 import kotlin.math.abs
@@ -24,13 +25,15 @@ class PDFWriter: Closeable {
     private var width: Float = 0f
     private var height: Float = 0f
     private lateinit var document: PDDocument
+    private lateinit var backgroundColor: Color
 
-    fun open(savePath: Path, width: Float, height: Float) {
+    fun open(savePath: Path, width: Float, height: Float, backgroundColor: Color) {
         if (isOpened) throw RuntimeException("already opened")
         this.savePath = savePath
         this.width = width
         this.height = height
         document = PDDocument(MemoryUsageSetting.setupTempFileOnly())
+        this.backgroundColor = backgroundColor
         isOpened = true
     }
 
@@ -48,6 +51,11 @@ class PDFWriter: Closeable {
 
         // 出力用のストリームを開いて画像を描画する
         PDPageContentStream(document, page).use {
+            // 背景黒
+            it.setNonStrokingColor(backgroundColor)
+            it.addRect(0f, 0f, width, height)
+            it.fill()
+
             val w = width / image.width
             val h = height / image.height
             val scale = if (abs(w) < abs(h)) w else h
