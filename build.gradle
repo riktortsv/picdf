@@ -1,7 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.21'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.9'
 }
 
 group = 'riktortsv'
@@ -40,94 +39,4 @@ jar {
     manifest {
         attributes 'Main-Class': application.mainClassName
     }
-}
-
-javafx {
-    version = "15.0.1"
-    modules = [ 'javafx.controls', 'javafx.fxml' ]
-}
-
-ext {
-    jreDir = file("${buildDir}/jre")
-}
-
-clean {
-    delete jreDir
-}
-
-task jlink(dependsOn: compileJava) {
-    outputs.dir jreDir
-
-    doLast {
-        def jdepsStandardOutput = new ByteArrayOutputStream()
-        exec {
-            commandLine(
-                    'jdeps', '--print-module-deps',
-                    '-filter', '^sun\\.reflect$',
-                    '--module-path', compileJava.classpath.asPath,
-                    '--multi-release', targetCompatibility,
-                    compileJava.destinationDir
-            )
-            standardOutput = jdepsStandardOutput
-        }
-
-        def modules = jdepsStandardOutput.toString().strip()
-
-        delete jreDir
-        exec {
-            commandLine(
-                    'jlink',
-                    '--compress', '2',
-                    '--strip-debug',
-                    '--no-header-files',
-                    '--no-man-pages',
-                    '--vm', 'server',
-                    '--add-modules', modules,
-                    '--output', jreDir
-            )
-        }
-    }
-}
-
-task ktlink(dependsOn: compileKotlin) {
-    outputs.dir jreDir
-
-    doLast {
-        def jdepsStandardOutput = new ByteArrayOutputStream()
-        exec {
-            commandLine(
-                    'jdeps', '--print-module-deps',
-                    '-filter', '^sun\\.reflect$',
-                    '--module-path', compileKotlin.classpath.asPath,
-                    '--multi-release', targetCompatibility,
-                    compileKotlin.destinationDir
-            )
-            standardOutput = jdepsStandardOutput
-        }
-
-        def modules = jdepsStandardOutput.toString().strip()
-        println("================================================================================")
-        println(compileKotlin.classpath.asPath)
-        println(compileKotlin.destinationDir)
-        println(modules)
-        println("================================================================================")
-
-        delete jreDir
-        exec {
-            commandLine(
-                    'jlink',
-                    '--compress', '2',
-                    '--strip-debug',
-                    '--no-header-files',
-                    '--no-man-pages',
-                    '--vm', 'server',
-                    '--add-modules', modules,
-                    '--output', jreDir
-            )
-        }
-    }
-}
-
-task bootRunCustomJRE(group: 'application', type: Exec, dependsOn: [jar, ktlink]) {
-    commandLine("${jreDir}/bin/java", '-jar', jar.path)
 }
