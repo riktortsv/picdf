@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 class ViewPresenter(val controller: ViewController): MainPresenter {
 
     private fun getViewModel(element: PDFImageElement): ElementViewModel {
-        return controller.elementsTable.items.first { it.element === element }
+        return controller.elementItems.first { it.element === element }
     }
 
     override suspend fun proceed(element: PDFImageElement) = withContext(Dispatchers.JavaFx) {
