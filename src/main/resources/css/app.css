@@ -1,0 +1,14 @@
+.root {
+    -fx-font-family: sans-serif;
+}
+
+.context-menu {
+    -fx-background-radius: 8 8 8 8;
+}
+
+.list-buttons {
+    -fx-fill: -fx-text-background-color;
+    -fx-font-family: monospaced;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}

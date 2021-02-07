@@ -25,7 +25,13 @@ class App : Application() {
     override fun start(primaryStage: Stage) {
         WindowStateSerializer().bind(primaryStage, "MAIN")
         val controller = ViewController(primaryStage)
-        primaryStage.scene = Scene(controller)
+        primaryStage.scene = Scene(controller).apply {
+            stylesheets.addAll(
+                    App::class.java.getResource("/css/dark.css").toExternalForm(),
+                    App::class.java.getResource("/css/app.css").toExternalForm()
+            )
+        }
+        controller.bindKeyCombinations()
         primaryStage.show()
     }
 }

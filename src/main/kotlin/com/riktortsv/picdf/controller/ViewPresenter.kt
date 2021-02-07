@@ -3,11 +3,16 @@ package com.riktortsv.picdf.controller
 import com.riktortsv.picdf.domain.PDFImageElement
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
+import javafx.stage.Stage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.withContext
 
-class ViewPresenter(val controller: ViewController): MainPresenter {
+class ViewPresenter(val controller: ViewController, val mainWindow: Stage): MainPresenter {
+
+    private fun setAlertStyle(alert: Alert) {
+        alert.initOwner(mainWindow)
+    }
 
     private fun getViewModel(element: PDFImageElement): ElementViewModel {
         return controller.elementsTable.items.first { it.element === element }
@@ -32,22 +37,28 @@ class ViewPresenter(val controller: ViewController): MainPresenter {
     }
 
     override suspend fun confirm(title: String, context: String) = withContext(Dispatchers.JavaFx) {
-        val alert = Alert(Alert.AlertType.CONFIRMATION, context, ButtonType.YES, ButtonType.NO)
-        alert.title = title
+        val alert = Alert(Alert.AlertType.CONFIRMATION, context, ButtonType.YES, ButtonType.NO).apply {
+            setAlertStyle(this)
+            this.title = title
+        }
         val result = alert.showAndWait()
         if (!result.isPresent) return@withContext false
         return@withContext result.get() == ButtonType.YES
     }
 
     override suspend fun message(title: String, context: String): Unit = withContext(Dispatchers.JavaFx) {
-        val alert = Alert(Alert.AlertType.INFORMATION, context, ButtonType.OK)
-        alert.title = title
+        val alert = Alert(Alert.AlertType.INFORMATION, context, ButtonType.OK).apply {
+            setAlertStyle(this)
+            this.title = title
+        }
         alert.showAndWait()
     }
 
     override suspend fun error(title: String, context: String): Unit = withContext(Dispatchers.JavaFx) {
-        val alert = Alert(Alert.AlertType.ERROR, context, ButtonType.OK)
-        alert.title = title
+        val alert = Alert(Alert.AlertType.ERROR, context, ButtonType.OK).apply {
+            setAlertStyle(this)
+            this.title = title
+        }
         alert.showAndWait()
     }
 

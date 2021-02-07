@@ -84,9 +84,9 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
 
     fun initialize() {
         // プロンプトメッセージを手動で設定
-        bundledLocalFilesArea.promptText = "ex.)${System.lineSeparator()}" +
-                "D:\\image1.jpg${System.lineSeparator()}" +
-                "D:\\image2.jpg${System.lineSeparator()}" +
+        bundledLocalFilesArea.promptText = "ex.)\r\n" +
+                "D:\\image1.jpg\r\n" +
+                "D:\\image2.jpg\r\n" +
                 "D:\\photo.png"
 
         // 参照ボタンのアクション定義
@@ -156,7 +156,9 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         val url = try {
             URL(parseWebUrlField.text)
         } catch (e: Exception) {
-            Alert(Alert.AlertType.INFORMATION, "URLを読み込めません", ButtonType.OK).showAndWait()
+            Alert(Alert.AlertType.INFORMATION, "URLを読み込めません", ButtonType.OK).apply {
+                initOwner(mainWindow)
+            }.showAndWait()
             return
         }
 
@@ -181,7 +183,7 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
         }
         fileChooser.title = "画像ファイルの選択"
         fileChooser.extensionFilters.addAll(
-            FileChooser.ExtensionFilter("画像ファイル", "*.png", "*.jpg", "*.gif"),
+            FileChooser.ExtensionFilter("画像ファイル", "*.png", "*.jpg", "*.gif", "*.bmp"),
             FileChooser.ExtensionFilter("すべてのファイル", "*.*")
         )
         val selectedFile = fileChooser.showOpenDialog(mainWindow)
@@ -198,7 +200,11 @@ class ElementRegisterController(val mainWindow: Stage): StackPane() {
 
         val stage = Stage()
         stage.title = "画像ファイルの追加"
-        stage.scene = Scene(this)
+        stage.scene = Scene(this).apply {
+            val sets = HashSet(stylesheets)
+            sets.addAll(mainWindow.scene.stylesheets)
+            stylesheets.setAll(sets)
+        }
         stage.isResizable = true
         stage.initOwner(mainWindow)
         stage.initModality(Modality.WINDOW_MODAL)

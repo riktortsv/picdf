@@ -23,54 +23,6 @@
                <content>
                   <TabPane fx:id="tabPane" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE">
                     <tabs>
-                      <Tab fx:id="localFileTab" closable="false" text="ローカル">
-                        <content>
-                              <GridPane hgap="8.0" vgap="2.0">
-                                 <columnConstraints>
-                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
-                                    <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
-                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
-                                 </columnConstraints>
-                                 <rowConstraints>
-                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                                 </rowConstraints>
-                                 <children>
-                                    <TextField fx:id="localFilePathField" GridPane.columnIndex="1" />
-                                    <TextField fx:id="localFileDisplayField" GridPane.columnIndex="1" GridPane.columnSpan="2147483647" GridPane.rowIndex="1" />
-                                    <Button fx:id="localFileBrowseButton" mnemonicParsing="false" text="選択" GridPane.columnIndex="2" />
-                                    <Label text="ファイルのパス" />
-                                    <Label text="表示名" GridPane.rowIndex="1" />
-                                 </children>
-                                 <padding>
-                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                 </padding>
-                              </GridPane>
-                        </content>
-                      </Tab>
-                      <Tab fx:id="internetFileTab" closable="false" text="インターネット">
-                        <content>
-                              <GridPane hgap="8.0" vgap="2.0">
-                                 <columnConstraints>
-                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
-                                    <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
-                                 </columnConstraints>
-                                 <rowConstraints>
-                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                 </rowConstraints>
-                                 <children>
-                                    <TextField fx:id="internetFileField" GridPane.columnIndex="1" />
-                                    <Label text="ファイルのURL" />
-                                    <Label text="表示名" GridPane.rowIndex="1" />
-                                    <TextField fx:id="internetFileDisplayField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                 </children>
-                                 <padding>
-                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                 </padding>
-                              </GridPane>
-                        </content>
-                      </Tab>
                         <Tab fx:id="bundledLocalFileTab" closable="false" text="ローカル（一括）">
                            <content>
                               <BorderPane>
@@ -105,6 +57,54 @@
                               </BorderPane>
                           </content>
                         </Tab>
+                      <Tab fx:id="localFileTab" closable="false" disable="true" text="ローカル">
+                        <content>
+                              <GridPane hgap="8.0" vgap="2.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                    <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <TextField fx:id="localFilePathField" GridPane.columnIndex="1" />
+                                    <TextField fx:id="localFileDisplayField" GridPane.columnIndex="1" GridPane.columnSpan="2147483647" GridPane.rowIndex="1" />
+                                    <Button fx:id="localFileBrowseButton" mnemonicParsing="false" text="選択" GridPane.columnIndex="2" />
+                                    <Label text="ファイルのパス" />
+                                    <Label text="表示名" GridPane.rowIndex="1" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </GridPane>
+                        </content>
+                      </Tab>
+                      <Tab fx:id="internetFileTab" closable="false" disable="true" text="インターネット">
+                        <content>
+                              <GridPane hgap="8.0" vgap="2.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                    <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <TextField fx:id="internetFileField" GridPane.columnIndex="1" />
+                                    <Label text="ファイルのURL" />
+                                    <Label text="表示名" GridPane.rowIndex="1" />
+                                    <TextField fx:id="internetFileDisplayField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </GridPane>
+                        </content>
+                      </Tab>
                     </tabs>
                   </TabPane>
                </content>

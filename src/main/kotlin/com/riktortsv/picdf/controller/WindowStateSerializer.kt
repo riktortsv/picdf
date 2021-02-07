@@ -13,13 +13,14 @@ class WindowStateSerializer {
         val propertyWidth = propertyPrefix + "_WIDTH"
         val propertyHeight = propertyPrefix + "_HEIGHT"
         val propertyMaximized = propertyPrefix + "_MAXIMIZED"
-        val propertyFullScreen = propertyPrefix + "_FULLSCREEN"
+        val propertyFullScreen = propertyPrefix + "_FULL_SCREEN"
 
         var previousX = 0.0
         var previousY = 0.0
         var previousWidth = 0.0
         var previousHeight = 0.0
 
+        // 0.1秒遅延させたのち、最大化されていなければ位置・大きさを記憶するサービス
         val delayService = object : Service<Unit>() {
             override fun createTask(): Task<Unit> {
                 return object : Task<Unit>() {

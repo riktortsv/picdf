@@ -49,6 +49,8 @@ class PDFWriterService {
                     presenter.proceed(element)
                 } catch (e: IOException) {
                     presenter.failure(element, "IOエラー")
+                } catch (e: NullPointerException) {
+                    presenter.failure(element, "画像ファイルではありません")
                 } catch (e: Exception) {
                     presenter.error("予期しないエラー", "予期しないエラーが発生しました")
                     presenter.failure(element, e.message ?: "予期しないエラー")

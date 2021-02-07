@@ -16,6 +16,9 @@ import javafx.scene.layout.StackPane
 import javafx.util.converter.IntegerStringConverter
 import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.control.cell.TextFieldTableCell
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.input.KeyCombination
 import javafx.scene.input.TransferMode
 import javafx.stage.FileChooser
 import javafx.stage.Stage
@@ -107,6 +110,9 @@ class ViewController(val mainWindow: Stage): StackPane() {
 
     private lateinit var controls: Collection<Node>
 
+    /**
+     * FXMLLoaderによって呼び出される初期化メソッド
+     */
     fun initialize() {
         // 幅、高さを数字入力のみに
         widthField.textFormatter = TextFormatter(IntegerStringConverter(), 0)
@@ -212,6 +218,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
         setOnDragDone { e ->
             e.consume()
         }
+        elementsTable.placeholder = Label("ファイルをドラッグ&ドロップで追加します")
 
         controls = listOf(colorPicker, widthField, heightField,
                 upButton, downButton,
@@ -219,13 +226,26 @@ class ViewController(val mainWindow: Stage): StackPane() {
                 pdfSizeMenuButton, browseButton
         )
 
-        Injector.presenter = ViewPresenter(this)
+        Injector.presenter = ViewPresenter(this, mainWindow)
 
+        // 画面を閉じた時に全てのコルーチンをキャンセル
         mainWindow.showingProperty().addListener { o, ov, nv ->
             if (!nv) scope.cancel()
         }
 
+        // タスクを実行するときに進捗を表示するように
         progress.visibleProperty().bind(progress.indeterminateProperty().not())
+    }
+
+    /**
+     * キーコンビネーションを定義
+     */
+    fun bindKeyCombinations() {
+        val accelerators = mainWindow.scene.accelerators
+        // 画像を追加するボタン
+        accelerators[KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN)] = Runnable {
+            addButton.fire()
+        }
     }
 
     private fun upPriority() {
@@ -348,7 +368,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
             elementsTable.items.forEach {
                 it.doneProperty().value = false
             }
-            elementsTable.columns.forEach { it.isSortable = false }
+            elementsTable.columns.forEach { it.isSortable = true }
 
             // タスククリア
             task = null
