@@ -1,25 +1,12 @@
 package com.riktortsv.picdf.controller
 
-import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject
 import com.riktortsv.picdf.domain.PDFImageElement
 import javafx.beans.property.BooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.StringProperty
-import java.awt.image.BufferedImage
 
-class ElementViewModel(val element: PDFImageElement): RecursiveTreeObject<ElementViewModel>() {
-
-    companion object {
-        private object DummyImageElement : PDFImageElement {
-            override val fullPath: String = ""
-            override var displayName: String = ""
-            override fun readImage(): BufferedImage {
-                throw NotImplementedError()
-            }
-        }
-        val ROOT = ElementViewModel(DummyImageElement)
-    }
+class ElementViewModel(val element: PDFImageElement) {
 
     private val displayProperty: StringProperty = SimpleStringProperty(element.displayName)
     fun displayProperty() = displayProperty

@@ -16,7 +16,6 @@ dependencies {
     compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.22'
     compile group: 'com.twelvemonkeys.imageio', name: 'imageio-jpeg', version: '3.4.1'
     compile group: 'org.jsoup', name: 'jsoup', version: '1.13.1'
-    compile group: 'com.jfoenix', name: 'jfoenix', version: '8.0.10'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
 }
 

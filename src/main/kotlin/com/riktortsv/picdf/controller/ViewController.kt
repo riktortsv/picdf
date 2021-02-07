@@ -1,6 +1,5 @@
 package com.riktortsv.picdf.controller
 
-import com.jfoenix.controls.*
 import com.riktortsv.picdf.app.AppProperty
 import com.riktortsv.picdf.app.PDFWriterParams
 import com.riktortsv.picdf.app.PDFWriterService
@@ -8,21 +7,18 @@ import com.riktortsv.picdf.core.Injector
 import com.riktortsv.picdf.core.StringUtils
 import com.riktortsv.picdf.domain.FileImageElement
 import com.riktortsv.picdf.domain.URLImageElement
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleStringProperty
-import javafx.beans.value.ObservableValue
-import javafx.collections.FXCollections
-import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Node
 import javafx.scene.control.*
-import javafx.scene.control.cell.CheckBoxTreeTableCell
-import javafx.scene.input.TransferMode
+import javafx.scene.control.cell.CheckBoxTableCell
 import javafx.scene.layout.StackPane
+import javafx.util.converter.IntegerStringConverter
+import javafx.scene.control.cell.PropertyValueFactory
+import javafx.scene.control.cell.TextFieldTableCell
+import javafx.scene.input.TransferMode
 import javafx.stage.FileChooser
 import javafx.stage.Stage
-import javafx.util.converter.IntegerStringConverter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
 import java.awt.Color
@@ -43,64 +39,64 @@ class ViewController(val mainWindow: Stage): StackPane() {
     }
 
     @FXML
-    lateinit var displayNameColumn: JFXTreeTableColumn<ElementViewModel, String>
+    lateinit var displayNameColumn: TableColumn<ElementViewModel, String>
 
     @FXML
-    lateinit var pathColumn: JFXTreeTableColumn<ElementViewModel, String>
+    lateinit var pathColumn: TableColumn<ElementViewModel, String>
 
     @FXML
-    lateinit var doneColumn: JFXTreeTableColumn<ElementViewModel, Boolean>
+    lateinit var doneColumn: TableColumn<ElementViewModel, Boolean>
 
     @FXML
-    lateinit var resultColumn: JFXTreeTableColumn<ElementViewModel, String>
+    lateinit var resultColumn: TableColumn<ElementViewModel, String>
 
     @FXML
-    lateinit var elementsTable: JFXTreeTableView<ElementViewModel>
+    lateinit var elementsTable: TableView<ElementViewModel>
 
     @FXML
-    lateinit var upButton: JFXButton
+    lateinit var upButton: Button
 
     @FXML
-    lateinit var downButton: JFXButton
+    lateinit var downButton: Button
 
     @FXML
-    lateinit var addButton: JFXButton
+    lateinit var addButton: Button
 
     @FXML
-    lateinit var removeButton: JFXButton
+    lateinit var removeButton: Button
 
     @FXML
-    lateinit var colorPicker: JFXColorPicker
+    lateinit var colorPicker: ColorPicker
 
     @FXML
-    lateinit var widthField: JFXTextField
+    lateinit var widthField: TextField
 
     @FXML
-    lateinit var heightField: JFXTextField
+    lateinit var heightField: TextField
 
     @FXML
-    lateinit var pdfSizeMenuButton: JFXNodesList
+    lateinit var pdfSizeMenuButton: MenuButton
 
     @FXML
-    lateinit var clearSizeMenuItem: JFXButton
+    lateinit var clearSizeMenuItem: MenuItem
 
     @FXML
-    lateinit var a4VerticalMenuItem: JFXButton
+    lateinit var a4VerticalMenuItem: MenuItem
 
     @FXML
-    lateinit var a4HorizontalMenuItem: JFXButton
+    lateinit var a4HorizontalMenuItem: MenuItem
 
     @FXML
-    lateinit var savePathField: JFXTextField
+    lateinit var savePathField: TextField
 
     @FXML
-    lateinit var browseButton: JFXButton
+    lateinit var browseButton: Button
 
     @FXML
-    lateinit var launchButton: JFXButton
+    lateinit var launchButton: Button
 
     @FXML
-    lateinit var progress: JFXSpinner
+    lateinit var progress: ProgressIndicator
 
     init {
         val loader = FXMLLoader(javaClass.getResource("/fxml/Main.fxml"))
@@ -110,10 +106,6 @@ class ViewController(val mainWindow: Stage): StackPane() {
     }
 
     private lateinit var controls: Collection<Node>
-
-    lateinit var elementItems: ObservableList<ElementViewModel>
-
-    private lateinit var tableRootItem: RecursiveTreeItem<ElementViewModel>
 
     fun initialize() {
         // 幅、高さを数字入力のみに
@@ -140,36 +132,18 @@ class ViewController(val mainWindow: Stage): StackPane() {
         } catch (e: Exception) {
         }
 
-        elementItems = FXCollections.observableArrayList()
-        tableRootItem = RecursiveTreeItem(elementItems) { it.children }
-
         // テーブル列のフォーマット定義
-        fun <T> setupCellValueFactory(
-            column: JFXTreeTableColumn<ElementViewModel, T>,
-            mapper: (ElementViewModel?) -> ObservableValue<T>
-        ) {
-            column.setCellValueFactory { param: TreeTableColumn.CellDataFeatures<ElementViewModel, T> ->
-                if (column.validateValue(param)) {
-                    if (param.value == null) {
-                        return@setCellValueFactory mapper(null)
-                    } else {
-                        return@setCellValueFactory mapper(param.value.value)
-                    }
-                } else {
-                    return@setCellValueFactory column.getComputedValue(param)
-                }
-            }
-        }
-        setupCellValueFactory(displayNameColumn) { it?.displayProperty() ?: SimpleStringProperty() }
-        setupCellValueFactory(pathColumn) { it?.pathProperty() ?: SimpleStringProperty() }
-        setupCellValueFactory(doneColumn) { it?.doneProperty() ?: SimpleBooleanProperty() }
-        setupCellValueFactory(resultColumn) { it?.resultProperty() ?: SimpleStringProperty() }
-        doneColumn.cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(doneColumn)
+        displayNameColumn.cellValueFactory = PropertyValueFactory("display")
+        pathColumn.cellValueFactory = PropertyValueFactory("path")
+        doneColumn.cellValueFactory = PropertyValueFactory("done")
+        resultColumn.cellValueFactory = PropertyValueFactory("result")
+        displayNameColumn.cellFactory = TextFieldTableCell.forTableColumn()
+        pathColumn.cellFactory = TextFieldTableCell.forTableColumn()
+        doneColumn.cellFactory = CheckBoxTableCell.forTableColumn(doneColumn)
+        resultColumn.cellFactory = TextFieldTableCell.forTableColumn()
 
         // TableView
         elementsTable.selectionModel.selectionMode = SelectionMode.SINGLE
-        elementsTable.root = tableRootItem
-        elementsTable.isShowRoot = false
 
         // 一覧操作ボタン
         upButton.setOnAction { upPriority() }
@@ -230,7 +204,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
             }.map { ElementViewModel(it) }
 
             // テーブルに追加
-            elementItems.addAll(elements)
+            elementsTable.items.addAll(elements)
 
             e.isDropCompleted = true
             e.consume()
@@ -252,31 +226,29 @@ class ViewController(val mainWindow: Stage): StackPane() {
         }
 
         progress.visibleProperty().bind(progress.indeterminateProperty().not())
-
-        stylesheets.add(javaClass.getResource("/css/jfoenix.css").toExternalForm())
     }
 
     private fun upPriority() {
         val index = elementsTable.selectionModel.selectedIndex
         if (index < 0) return
 
-        Collections.swap(elementItems, index, max(0, index - 1))
+        Collections.swap(elementsTable.items, index, max(0, index - 1))
     }
 
     private fun downPriority() {
         val index = elementsTable.selectionModel.selectedIndex
         if (index < 0) return
 
-        Collections.swap(elementItems, index, min(elementItems.size - 1, index + 1))
+        Collections.swap(elementsTable.items, index, min(elementsTable.items.size - 1, index + 1))
     }
 
     private fun addElement() {
-        ElementRegisterController(mainWindow).showDialog(elementItems)
+        ElementRegisterController(mainWindow).showDialog(elementsTable.items)
     }
 
     private fun removeElement() {
-        val item = elementsTable.selectionModel.selectedItem?.value ?: return
-        elementItems.remove(item)
+        val item = elementsTable.selectionModel.selectedItem ?: return
+        elementsTable.items.remove(item)
     }
 
     private fun browseSavePath() {
@@ -329,7 +301,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
             savePathField.requestFocus()
             return
         }
-        val items = elementItems.map { it.element }
+        val items = elementsTable.items.map { it.element }
         val width = widthField.text.toDoubleOrNull() ?: 0.0
         val height = heightField.text.toDoubleOrNull() ?: 0.0
 
@@ -342,7 +314,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
         AppProperty.setValue(PDF_HEIGHT, height.toInt())
 
         // クリーン
-        elementItems.forEach {
+        elementsTable.items.forEach {
             it.resultProperty().value = null
         }
 
@@ -373,7 +345,7 @@ class ViewController(val mainWindow: Stage): StackPane() {
             // UI変更
             controls.forEach { it.isDisable = false }
             launchButton.text = "開始"
-            elementItems.forEach {
+            elementsTable.items.forEach {
                 it.doneProperty().value = false
             }
             elementsTable.columns.forEach { it.isSortable = false }
